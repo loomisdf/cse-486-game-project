@@ -13,7 +13,8 @@ import game.*;
  */
 public class MiniMaxBreakthroughPlayer extends GamePlayer {
     public final int MAX_DEPTH = 10;
-    private final int MAX_SCORE = Integer.MAX_VALUE;
+    // We don't know how to figure out the max score
+    private static final int MAX_SCORE = Integer.MAX_VALUE;
     public int depthLimit;
 
     public ScoredBreakthroughMove mvStack[];
@@ -88,6 +89,13 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
 
     public static int eval(BreakthroughState brd, char who) {
         int score = 0;
+        for(int r = 0; r < BreakthroughState.N; r++) {
+           for(int c = 0; c < BreakthroughState.N; c++) {
+               if(brd.board[r][c] == who) {
+                   score++;
+               }
+           }
+        }
         return score;
     }
 
@@ -108,6 +116,7 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
 
         }
         else if(currDepth == depthLimit) {
+            // Don't understand what this is supposed to represent
            mvStack[currDepth].set(0, 0, 0, 0, evalBoard(brd));
         }
         else {
@@ -115,6 +124,7 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
 
             double bestScore = (brd.getWho() == GameState.Who.HOME ? Double.NEGATIVE_INFINITY
                     : Double.POSITIVE_INFINITY);
+            // How are the scores for bestMove and nextMove evaluated?
             ScoredBreakthroughMove bestMove = mvStack[currDepth];
             ScoredBreakthroughMove nextMove = mvStack[currDepth + 1];
 
@@ -149,6 +159,12 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
             board_copy.makeMove(tempMv);
 
             minimax(board_copy, currDepth + 1);
+
+            if (toMaximize && nextMove.score > bestMove.score) {
+                bestMove.set(nextMove.startRow, nextMove.endingRow, nextMove.startCol, nextMove.endingCol, nextMove.score);
+            } else if (!toMaximize && nextMove.score < bestMove.score) {
+                bestMove.set(nextMove.startRow, nextMove.endingRow, nextMove.startCol, nextMove.endingCol, nextMove.score);
+            }
         }
     }
 
