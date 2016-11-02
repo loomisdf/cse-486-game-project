@@ -1,10 +1,13 @@
 package breakthrough;
 
+import com.sun.xml.internal.bind.annotation.OverrideAnnotationOf;
 import game.GameMove;
 import game.GamePlayer;
 import game.GameState;
 
 import java.util.ArrayList;
+import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 
 import game.*;
 
@@ -41,10 +44,15 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
 
         public void set(int r1, int c1, int r2, int c2, double s) {
             startRow = r1;
-            startCol = c2;
+            startCol = c1;
             endingRow = r2;
             endingCol = c2;
             score = s;
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + " " + this.score;
         }
 
         public double score;
@@ -108,10 +116,48 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
         return score;
     }
 
+    protected static void shuffle(ArrayList<BreakthroughMove> ary) {
+        int len = ary.size();
+        for (int i = 0; i < len; i++) {
+            int spot = Util.randInt(i, len - 1);
+            BreakthroughMove tmp = ary.get(i);
+            ary.set(i, ary.get(spot)); // ary[i] = ary[spot];
+            ary.set(spot, tmp); // ary[spot] = tmp;
+        }
+    }
+
+    private ArrayList<BreakthroughMove> getAvailableMoves(BreakthroughState brd) {
+        ArrayList<BreakthroughMove> list = new ArrayList<BreakthroughMove>();
+        BreakthroughMove mv = new BreakthroughMove();
+        int dir = brd.who == GameState.Who.HOME ? +1 : -1;
+        for (int r=0; r<BreakthroughState.N; r++) {
+            for (int c=0; c<BreakthroughState.N; c++) {
+                mv.startRow = r;
+                mv.startCol = c;
+                mv.endingRow = r+dir; mv.endingCol = c;
+                if (brd.moveOK(mv)) {
+                    list.add((BreakthroughMove)mv.clone());
+                }
+                mv.endingRow = r+dir; mv.endingCol = c+1;
+                if (brd.moveOK(mv)) {
+                    list.add((BreakthroughMove)mv.clone());
+                }
+                mv.endingRow = r+dir; mv.endingCol = c-1;
+                if (brd.moveOK(mv)) {
+                    list.add((BreakthroughMove)mv.clone());
+                }
+            }
+        }
+        return list;
+    }
+
     private void minimax(BreakthroughState brd, int currDepth) {
         boolean toMaximize = (brd.getWho() == GameState.Who.HOME);
         boolean isTerminal = terminalValue(brd, mvStack[currDepth]);
 
+        if (currDepth == depthLimit) {
+            System.out.println();
+        }
         if(isTerminal) {
 
         }
@@ -120,7 +166,6 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
            mvStack[currDepth].set(0, 0, 0, 0, evalBoard(brd));
         }
         else {
-            ScoredBreakthroughMove tempMv;
 
             double bestScore = (brd.getWho() == GameState.Who.HOME ? Double.NEGATIVE_INFINITY
                     : Double.POSITIVE_INFINITY);
@@ -131,39 +176,20 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
             bestMove.set(0, 0, 0, 0, bestScore);
             GameState.Who currTurn = brd.getWho();
 
-            BreakthroughState board_copy = (BreakthroughState)brd;
-            ArrayList<BreakthroughMove> list = new ArrayList<BreakthroughMove>();
-            BreakthroughMove mv = new BreakthroughMove();
-            int dir = brd.who == GameState.Who.HOME ? +1 : -1;
-            for (int r=0; r<BreakthroughState.N; r++) {
-                for (int c=0; c<BreakthroughState.N; c++) {
-                    mv.startRow = r;
-                    mv.startCol = c;
-                    mv.endingRow = r+dir; mv.endingCol = c;
-                    if (board_copy.moveOK(mv)) {
-                        list.add((BreakthroughMove)mv.clone());
-                    }
-                    mv.endingRow = r+dir; mv.endingCol = c+1;
-                    if (board_copy.moveOK(mv)) {
-                        list.add((BreakthroughMove)mv.clone());
-                    }
-                    mv.endingRow = r+dir; mv.endingCol = c-1;
-                    if (board_copy.moveOK(mv)) {
-                        list.add((BreakthroughMove)mv.clone());
-                    }
+            ArrayList<BreakthroughMove> mvList = getAvailableMoves(brd);
+            shuffle(mvList);
+
+            for(BreakthroughMove mv : mvList) {
+                ScoredBreakthroughMove tempMv = new ScoredBreakthroughMove(mv);
+                BreakthroughState board_copy = (BreakthroughState)brd.clone();
+                board_copy.makeMove(tempMv);
+                minimax(board_copy, currDepth + 1);
+
+                if (toMaximize && nextMove.score > bestMove.score) {
+                    bestMove.set(tempMv.startRow, tempMv.startCol, tempMv.endingRow, tempMv.endingCol, nextMove.score);
+                } else if (!toMaximize && nextMove.score < bestMove.score) {
+                    bestMove.set(tempMv.startRow, tempMv.startCol, tempMv.endingRow, tempMv.endingCol, nextMove.score);
                 }
-            }
-            int which = Util.randInt(0, list.size()-1);
-            tempMv = new ScoredBreakthroughMove(list.get(which));
-
-            board_copy.makeMove(tempMv);
-
-            minimax(board_copy, currDepth + 1);
-
-            if (toMaximize && nextMove.score > bestMove.score) {
-                bestMove.set(nextMove.startRow, nextMove.endingRow, nextMove.startCol, nextMove.endingCol, nextMove.score);
-            } else if (!toMaximize && nextMove.score < bestMove.score) {
-                bestMove.set(nextMove.startRow, nextMove.endingRow, nextMove.startCol, nextMove.endingCol, nextMove.score);
             }
         }
     }
@@ -171,11 +197,17 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
     @Override
     public GameMove getMove(GameState state, String lastMv) {
         minimax((BreakthroughState) state, 0);
+        try {
+            if(!state.moveOK(mvStack[0]))
+                throw new Exception("Move invalid");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return mvStack[0];
     }
 
     public static void main(String[] args) {
-        GamePlayer p = new MiniMaxBreakthroughPlayer("Mini Max Player", 6);
+        GamePlayer p = new MiniMaxBreakthroughPlayer("Mini Max Player", 1);
         p.compete(args);
         System.out.println("Hi");
     }
