@@ -234,17 +234,17 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
                 }
 
                 // Update alpha and beta. Perform pruning, if possible.
-//                if (toMinimize) {
-//                    beta = Math.min(bestMove.score, beta);
-//                    if (bestMove.score <= alpha || bestMove.score == -MAX_SCORE) {
-//                        return;
-//                    }
-//                } else {
-//                    alpha = Math.max(bestMove.score, alpha);
-//                    if (bestMove.score >= beta || bestMove.score == MAX_SCORE) {
-//                        return;
-//                    }
-//                }
+                if (toMinimize) {
+                    beta = Math.min(bestMove.score, beta);
+                    if (bestMove.score <= alpha || bestMove.score == -MAX_SCORE) {
+                        return;
+                    }
+                } else {
+                    alpha = Math.max(bestMove.score, alpha);
+                    if (bestMove.score >= beta || bestMove.score == MAX_SCORE) {
+                        return;
+                    }
+                }
             }
         }
     }
