@@ -133,9 +133,9 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
                 if (state.board[r][c] == who) {
                     score+= 10;
                 }
-                if (!hasNeighbor(state, r, c, who)) {
-                    score++;
-                }
+//                if (!hasNeighbor(state, r, c, who)) {
+//                    score++;
+//                }
             }
         }
         return score;
@@ -210,8 +210,6 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
             ScoredBreakthroughMove bestMove = mvStack.get(currDepth);
             ScoredBreakthroughMove nextMove = mvStack.get(currDepth + 1);
 
-            System.out.println("next move: " + nextMove);
-
             bestMove.set(0, 0, 0, 0, bestScore);
 
             ArrayList<BreakthroughMove> mvList = getAvailableMoves(brd);
@@ -251,7 +249,8 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
 
     @Override
     public GameMove getMove(GameState state, String lastMv) {
-        if(state.numMoves == 0) {
+        System.out.println("state.numMoves = " + state.numMoves);
+        if(state.numMoves == 0 || state.numMoves == 1) {
             moveTimeLeft = 240 * 1000;
         }
         double beforeTime = System.currentTimeMillis();
@@ -297,9 +296,9 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
 
     public static void main(String[] args) {
         GamePlayer p = new MiniMaxBreakthroughPlayer("Mini Max Player", 1);
-        p.compete(args);
+//        p.compete(args);
         System.out.println("Hi");
-//        p.solvePuzzles(new String [] {"BTPuzzle1", "BTPuzzle2"});
+        p.solvePuzzles(new String [] {"BTPuzzle1", "BTPuzzle2"});
     }
 
 }
