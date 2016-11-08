@@ -97,23 +97,47 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
         }
         return isTerminal;
     }
+    public static boolean hasNeighbor(BreakthroughState state, int r, int c, char who) {
+        boolean hasNeighbor = false;
+        if(r != 0 && state.board[r-1][c] == who) {
+            hasNeighbor = true;
+        }
+        if(r != BreakthroughState.N - 1 && state.board[r+1][c] == who) {
+            hasNeighbor = true;
+        }
+        if(c != 0 && state.board[r][c-1] == who) {
+            hasNeighbor = true;
+        }
+        if(c != BreakthroughState.N - 1 && state.board[r][c+1] == who) {
+            hasNeighbor = true;
+        }
+        if(r != 0 && c != 0 && state.board[r-1][c-1] == who) {
+            hasNeighbor = true;
+        }
+        if(r != 0 && c != BreakthroughState.N - 1 && state.board[r-1][c+1] == who) {
+            hasNeighbor = true;
+        }
+        if(r != BreakthroughState.N - 1 && c != 0 && state.board[r+1][c-1] == who) {
+            hasNeighbor = true;
+        }
+        if(r != BreakthroughState.N - 1 && c != BreakthroughState.N - 1 && state.board[r+1][c+1] == who) {
+            hasNeighbor = true;
+        }
+        return hasNeighbor;
+    }
 
     public static int eval(BreakthroughState state, char who) {
         int score = 0;
         for(int r = 0; r < BreakthroughState.N; r++) {
-           for(int c = 0; c < BreakthroughState.N; c++) {
-               if(state.board[r][c] == who) {
-                   score+=5;
-               }
-               if(state.board[r][c] == who && (r == 3 || r == 4)) {
-                   score++;
-               }
-               if(state.board[r][c] == who && (r == 3 || r == 4) && (c == 3 || c == 4)) {
-                   score++;
-               }
-           }
+            for (int c = 0; c < BreakthroughState.N; c++) {
+                if (state.board[r][c] == who) {
+                    score+= 10;
+                }
+                if (!hasNeighbor(state, r, c, who)) {
+                    score++;
+                }
+            }
         }
-
         return score;
     }
 
@@ -186,6 +210,8 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
             ScoredBreakthroughMove bestMove = mvStack.get(currDepth);
             ScoredBreakthroughMove nextMove = mvStack.get(currDepth + 1);
 
+            System.out.println("next move: " + nextMove);
+
             bestMove.set(0, 0, 0, 0, bestScore);
 
             ArrayList<BreakthroughMove> mvList = getAvailableMoves(brd);
@@ -200,6 +226,7 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
                 double timeTaken = afterTime - beforeTime;
                 minimax(board_copy, alpha, beta, currDepth + 1, timeRemaining - timeTaken);
 
+
                 if (toMaximize && nextMove.score > bestMove.score) {
                     bestMove.set(tempMv.startRow, tempMv.startCol, tempMv.endingRow, tempMv.endingCol, nextMove.score);
                 } else if (!toMaximize && nextMove.score < bestMove.score) {
@@ -207,17 +234,17 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
                 }
 
                 // Update alpha and beta. Perform pruning, if possible.
-                if (toMinimize) {
-                    beta = Math.min(bestMove.score, beta);
-                    if (bestMove.score <= alpha || bestMove.score == -MAX_SCORE) {
-                        return;
-                    }
-                } else {
-                    alpha = Math.max(bestMove.score, alpha);
-                    if (bestMove.score >= beta || bestMove.score == MAX_SCORE) {
-                        return;
-                    }
-                }
+//                if (toMinimize) {
+//                    beta = Math.min(bestMove.score, beta);
+//                    if (bestMove.score <= alpha || bestMove.score == -MAX_SCORE) {
+//                        return;
+//                    }
+//                } else {
+//                    alpha = Math.max(bestMove.score, alpha);
+//                    if (bestMove.score >= beta || bestMove.score == MAX_SCORE) {
+//                        return;
+//                    }
+//                }
             }
         }
     }
