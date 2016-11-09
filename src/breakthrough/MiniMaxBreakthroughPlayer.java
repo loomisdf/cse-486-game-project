@@ -14,13 +14,17 @@ import game.*;
 public class MiniMaxBreakthroughPlayer extends GamePlayer {
     public final int MAX_DEPTH = 10;
     public final int PANIC_TIME = 1000;
-    public final int MID_GAME_MOVE_TIME = 4000;
-    public final int EARLY_GAME_MOVE_TIME = 1000;
+    public final int OPENING_TIME = 100;
+    public final int MID_GAME_MOVE_TIME = 5000;
+    public final int EARLY_GAME_MOVE_TIME = 6000;
     public final int LATE_GAME_TIME = 8000;
     public static double moveTimeLeft;
+    enum GAME_STATE { EARLY_GAME, LATE_GAME, MID_GAME }
+    public static GAME_STATE game_state = GAME_STATE.EARLY_GAME;
     // We don't know how to figure out the max score
     private static final int MAX_SCORE = Integer.MAX_VALUE;
     public int depthLimit;
+    public static int pieceCount;
 
     public ArrayList<ScoredBreakthroughMove> mvStack;
 
@@ -97,6 +101,19 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
         }
         return isTerminal;
     }
+
+    public int getPieceCount(BreakthroughState brd) {
+        int cnt = 0;
+        for(int r = 0; r < BreakthroughState.N - 1; r++) {
+            for(int c = 0; c < BreakthroughState.N - 1; c++) {
+                if(brd.board[r][c] == BreakthroughState.awaySym || brd.board[r][c] == BreakthroughState.homeSym) {
+                    cnt++;
+                }
+            }
+        }
+        return cnt;
+    }
+
     public static boolean hasNeighbor(BreakthroughState state, int r, int c, char who) {
         boolean hasNeighbor = false;
         if(r != 0 && state.board[r-1][c] == who) {
@@ -131,11 +148,13 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
         for(int r = 0; r < BreakthroughState.N; r++) {
             for (int c = 0; c < BreakthroughState.N; c++) {
                 if (state.board[r][c] == who) {
-                    score+= 10;
+                    score += 10;
                 }
-//                if (!hasNeighbor(state, r, c, who)) {
-//                    score++;
-//                }
+                if(game_state == GAME_STATE.MID_GAME) {
+                    if (!hasNeighbor(state, r, c, who)) {
+                        score++;
+                    }
+                }
             }
         }
         return score;
@@ -201,7 +220,7 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
 
         }
         else if(timeRemaining <= 0) {
-           mvStack.get(currDepth).set(0, 0, 0, 0, evalBoard(brd));
+            mvStack.get(currDepth).set(0, 0, 0, 0, evalBoard(brd));
         }
         else {
 
@@ -250,6 +269,8 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
     @Override
     public GameMove getMove(GameState state, String lastMv) {
         System.out.println("state.numMoves = " + state.numMoves);
+
+        pieceCount = getPieceCount((BreakthroughState) state);
         if(state.numMoves == 0 || state.numMoves == 1) {
             moveTimeLeft = 240 * 1000;
         }
@@ -268,6 +289,7 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
         moveTimeLeft -= timeTaken;
 
         System.out.println("Move time left: " + moveTimeLeft / 1000 + "secs");
+        System.out.println("Games state" + game_state);
 
         return mvStack.get(0);
     }
@@ -277,17 +299,22 @@ public class MiniMaxBreakthroughPlayer extends GamePlayer {
         // PANIC
         if(moveTimeLeft <= LATE_GAME_TIME + 1000) {
             System.out.println("ENTERING PANIC MODE");
-           time = 1; // use 1 depth level
+            time = 1; // use 1 depth level
         }
         // check for beginning of game
         else if(state.numMoves <= 4) {
+            time = OPENING_TIME;
+        }
+        else if(state.numMoves <= 16) {
             time = EARLY_GAME_MOVE_TIME;
         }
-        else if(state.numMoves > 4) {
-            if(moveTimeLeft <= 100 * 1000) {
+        else if(state.numMoves > 16) {
+            if(pieceCount < 24) {
+                game_state = GAME_STATE.LATE_GAME;
                 time = LATE_GAME_TIME;
             }
             else {
+                game_state = GAME_STATE.MID_GAME;
                 time = MID_GAME_MOVE_TIME;
             }
         }
